@@ -15,7 +15,6 @@ Zarf currently does not have explicit schema versions. Any schema changes are em
 
 - `setVariable` deprecated in favor of `setVariables`
 - `scripts` deprecated in favor of `actions`
-- `required` soon to be deprecated in favor of `optional`.
 - `group` deprecated in favor of `flavor`, however these work functionally different and cannot be automatically migrated
 - `cosignKeyPath` deprecated in favor of specifying the key path at create time
 
@@ -27,7 +26,7 @@ Creating a v1 schema will allow Zarf to establish a contract with it's user base
 
 ## Decision
 
-Zarf will begin having proper schema versions. A top level key, `apiVersion`, will be introduced to allow users to specify the schema. At the release of v1 the only valid user input for `apiVersion` will be v1. Zarf will not allow users to build using the v0 schema. `zarf package create` will fail if the user has deprecated keys or if `apiVersion` is missing and the user will be instructed to run the new `zarf dev update-schema` command. `zarf dev update-schema` will automatically migrate deprecated fields in the users `zarf.yaml` where possible. It will also add the apiVersion key and set it to v1.
+Zarf will begin having proper schema versions. A top level key, `apiVersion`, will be introduced to allow users to specify the schema. At the release of v1 the only valid user input for `apiVersion` will be v1. Zarf will not allow users to build using the v0 schema. `zarf package create` will fail if the user has deprecated keys or if `apiVersion` is missing and the user will be instructed to run the new `zarf dev migrate-schema` command. `zarf dev migrate-schema` will automatically migrate deprecated fields in the users `zarf.yaml` where possible. It will also add the apiVersion key and set it to v1.
 
 The existing go types which comprise the Zarf schema will be moved to types/alpha and will never change. An updated copy of these types without the deprecated fields will be created in a package types/v1 and any future schema changes will affect these objects. Internally, Zarf will introduce translation functions which will take the alpha schema and return the v1 schema. From that point on, all function signatures that have a struct that is included in the Zarf schema will change from `types.structName` to `v1.structName`.
 
@@ -39,11 +38,13 @@ When Zarf introduces new keys that they are not ready to promise long term suppo
 
 There are several other keys Zarf will deprecate which will have automated migrations to new fields
 - `.metadata.aggregateChecksum` -> `.build.aggregateChecksum`
+- `.components[x].required` -> `.components[x].optional`. Optional will default to false. This is a change in behavior as currently `required` defaults to true. However, automatic migration will work since we can set optional to true on any components which do not already have required.
 - Metadata fields `image`, `source`, `documentation`, `url`, `authors`, `vendors` -> will become a map of `annotations`
-- `noWait` -> `wait` which will default to true. This change will happen on both `.components.manifests` and `components.charts`
+- `noWait` -> `wait` which will default to true. This change will happen on both `.components.[x].manifests` and `components.[x].charts`
 - `yolo` -> `airgap` which will default to true
-- `.components.actions.[default/onAny].maxRetries` -> `.components.actions.[default/onAny].retries`
-- charts will change to avoid [current confusion with keys](https://github.com/defenseunicorns/zarf/issues/2245). Exactly one of the following fields will exist for each `components.charts`.
+- `.components.[x].actions.[default/onAny].maxRetries` -> `.components.[x].actions.[default/onAny].retries`
+- `.components.[x].actions.[default/onAny].maxTotalSeconds` -> `.components.[x].actions.[default/onAny].timeout`, which must be in a [Go recognized duration string format](https://pkg.go.dev/time#ParseDuration)
+- charts will change to avoid [current confusion with keys](https://github.com/defenseunicorns/zarf/issues/2245). Exactly one of the following fields will exist for each `components.[x].charts`.
 ```yaml
   helm:
     url: https://stefanprodan.github.io/podinfo
@@ -59,12 +60,6 @@ There are several other keys Zarf will deprecate which will have automated migra
   local:
    path: chart
 ```
-- `actions.wait` will be deprecated in favor of a wait list per component that is run on deploy. `action.wait` blocks that are `onDeploy.After` can be auto migrated and will work if deployed on v1. `wait` blocks that are not on `onDeploy.After` will not be auto migrated and the package will error out if deployed on v1. Zarf v1 will use kstatus for wait functionality instead of `kubectl wait`. `apiVersion` will be added as a required field on `wait`, and the `apiVersion` will be automatically set to the most recent `apiVersion` if the waited for resource is not a custom resource. Users can still wait on custom resources, but the resources must implement kStatus. `wait.condition` will be removed from the schema and Zarf will assume it is waiting for `ready`. A `wait` block will not be auto migrated if `condition` is not `set` to  `ready`, `available` or equivalent.
-In summary, a `wait` block will be auto migrated if, and only if:
-  - it is `onDeploy.after`
-  - the condition is `ready`, `available` or equivalent
-  - The kind is not a custom resource.
-- There may be further, more holistic changes to how actions works within Zarf that would have a significant affect on the schema. This will be covered in a separate ADR.
 
 ### BDD scenarios
 The following are [behavior driven development](https://en.wikipedia.org/wiki/Behavior-driven_development) scenarios to provide context of what Zarf will do in specific situations given the above decisions.
@@ -73,7 +68,7 @@ The following are [behavior driven development](https://en.wikipedia.org/wiki/Be
 - *Given* Zarf version is v1
 - *and* the `zarf.yaml` has no apiVersion or deprecated keys
 - *when* the user runs `zarf package create`
-- *then* they will receive an error and be told to run `zarf dev update-schema` or how to migrate off cosign key paths or how to use flavors over groups depending on the error
+- *then* they will receive an error and be told to run `zarf dev migrate-schema` or how to migrate off cosign key paths or how to use flavors over groups depending on the error
 
 #### v0 create -> v1 deploy
 - *Given*: A package is created with Zarf v0
@@ -96,7 +91,7 @@ The following are [behavior driven development](https://en.wikipedia.org/wiki/Be
 ## Consequences
 - As long as the only deprecated features in a package have a migration path, and the package was built after the feature was deprecated so migrations were run, Zarf will be successful in both creating a package with v1 and deploying with v0, and creating a package with v0 and deploying with v1.
 - Users of deprecated `group`, `cosignKeyPath`, and `action.Wait` keys outside of `onDeploy` might be frustrated if their packages, created v0, error out on Zarf v1, however this is preferable to unexpected behavior occurring in the cluster.
-- Users may be frustrated that they have to run `zarf dev update-schema` to edit their `zarf.yaml` to remove the deprecated fields and add `apiVersion`.
+- Users may be frustrated that they have to run `zarf dev migrate-schema` to edit their `zarf.yaml` to remove the deprecated fields and add `apiVersion`.
 - The Zarf codebase will contain two Zarf package objects, v1 and v0. Many fields on these objects will be unchanged across v0 and v1, however, v0 will not include new fields, and v1 will exclude deprecated fields. This approach is similar to the strategies used by [Kubernetes](https://github.com/kubernetes/api/tree/master/storage) and [flux](https://github.com/fluxcd/source-controller/tree/main/api)
 
 Look at [0026-schema.yaml](0026-schema.yaml) to see an example v1 zarf.yaml with, somewhat, reasonable & nonempty values for every key.
