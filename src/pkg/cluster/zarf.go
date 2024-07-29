@@ -179,11 +179,11 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg types.
 func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int) (deployedPackage *types.DeployedPackage, err error) {
 	packageName := pkg.Metadata.Name
 
-	// Attempt to load information about webhooks for the package
+	// Optionally try to get information about webhooks for the package.
 	var componentWebhooks map[string]map[string]types.Webhook
 	existingPackageSecret, err := c.GetDeployedPackage(ctx, packageName)
-	if err != nil {
-		message.Debugf("Unable to fetch existing secret for package '%s': %s", packageName, err.Error())
+	if err != nil && !kerrors.IsNotFound(err) {
+		return nil, err
 	}
 	if existingPackageSecret != nil {
 		componentWebhooks = existingPackageSecret.ComponentWebhooks
@@ -238,7 +238,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg types.ZarfPac
 		return secret, nil
 	}()
 	if err != nil {
-		return nil, fmt.Errorf("failed to record package deployment in secret '%s'", deployedPackageSecret.Name)
+		return nil, fmt.Errorf("failed to record package deployment in secret %s: %w", deployedPackageSecret.Name, err)
 	}
 	if err := json.Unmarshal(updatedSecret.Data["data"], &deployedPackage); err != nil {
 		return nil, err

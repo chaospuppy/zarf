@@ -167,8 +167,8 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 		// Ensure we don't overwrite any installedCharts data when updating the package secret
 		if p.isConnectedToCluster() {
 			deployedComponent.InstalledCharts, err = p.cluster.GetInstalledChartsForComponent(ctx, p.cfg.Pkg.Metadata.Name, component)
-			if err != nil {
-				message.Debugf("Unable to fetch installed Helm charts for component '%s': %s", component.Name, err.Error())
+			if err != nil && !kerrors.IsNotFound(err) {
+				return nil, err
 			}
 		}
 
@@ -178,7 +178,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 		// Update the package secret to indicate that we are attempting to deploy this component
 		if p.isConnectedToCluster() {
 			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
-				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+				return nil, err
 			}
 		}
 
@@ -206,7 +206,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 			deployedComponents[idx].Status = types.ComponentStatusFailed
 			if p.isConnectedToCluster() {
 				if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
-					message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+					return nil, err
 				}
 			}
 
@@ -218,7 +218,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 		if p.isConnectedToCluster() {
 			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
-				message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+				return nil, err
 			}
 		}
 
@@ -312,10 +312,9 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
 		if hasImages && !p.hpaModified && p.state.RegistryInfo.InternalRegistry {
 			if err := p.cluster.DisableRegHPAScaleDown(ctx); err != nil {
-				message.Debugf("unable to disable the registry HPA scale down: %s", err.Error())
-			} else {
-				p.hpaModified = true
+				return nil, fmt.Errorf("unable to dsable the registry HPA scale down: %w", err)
 			}
+			p.hpaModified = true
 		}
 	}
 
@@ -407,7 +406,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 			// Check if the file looks like a text file
 			isText, err := helpers.IsTextFile(subFile)
 			if err != nil {
-				message.Debugf("unable to determine if file %s is a text file: %s", subFile, err)
+				return err
 			}
 
 			// If the file is a text file, template it
