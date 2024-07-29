@@ -54,7 +54,7 @@ var packageCreateCmd = &cobra.Command{
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ var packageDeployCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}
@@ -112,7 +112,7 @@ var packageMirrorCmd = &cobra.Command{
 			return err
 		}
 		pkgConfig.PkgOpts.PackageSource = packageSource
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}
@@ -140,7 +140,7 @@ var packageInspectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig, packager.WithSource(src))
 		if err != nil {
 			return err
 		}
@@ -212,7 +212,7 @@ var packageRemoveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig, packager.WithSource(src))
 		if err != nil {
 			return err
 		}
@@ -253,7 +253,7 @@ var packagePublishCmd = &cobra.Command{
 
 		pkgConfig.PublishOpts.PackageDestination = ref.String()
 
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}
@@ -273,7 +273,7 @@ var packagePullCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pkgConfig.PkgOpts.PackageSource = args[0]
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}

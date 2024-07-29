@@ -27,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -212,7 +213,7 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 
 	// Ignore SBOM creation if the flag is set.
 	if skipSBOMFlagUsed {
-		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
+		logging.FromContextOrDiscard(ctx).Debug("Skipping image SBOm processing per --skip-sbom flag")
 	} else {
 		dst.AddSBOMs()
 		if err := sbom.Catalog(componentSBOMs, sbomImageList, dst); err != nil {

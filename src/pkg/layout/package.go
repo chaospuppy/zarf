@@ -309,8 +309,6 @@ func (pp *PackagePaths) SetFromPaths(paths []string) {
 				pp.Components.Tarballs = make(map[string]string)
 			}
 			pp.Components.Tarballs[componentName] = filepath.Join(pp.Base, path)
-		default:
-			message.Debug("ignoring path", path)
 		}
 	}
 }

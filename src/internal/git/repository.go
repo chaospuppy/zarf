@@ -18,6 +18,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -216,7 +217,7 @@ func (r *Repository) Push(ctx context.Context, address, username, password strin
 		},
 	})
 	if errors.Is(err, git.NoErrAlreadyUpToDate) {
-		message.Debug("Repo already up-to-date")
+		logging.FromContextOrDiscard(ctx).Debug("Repository already up-to-date")
 	} else if errors.Is(err, plumbing.ErrObjectNotFound) {
 		return fmt.Errorf("unable to push repo due to likely shallow clone: %s", err.Error())
 	} else if err != nil {

@@ -32,6 +32,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -47,7 +48,7 @@ var (
 func (p *Packager) resetRegistryHPA(ctx context.Context) {
 	if p.isConnectedToCluster() && p.hpaModified {
 		if err := p.cluster.EnableRegHPAScaleDown(ctx); err != nil {
-			message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
+			logging.FromContextOrDiscard(ctx).Error("Unable to reenable the registry HPA scale down", "error", err)
 		}
 	}
 }
@@ -286,6 +287,8 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 
 // Deploy a Zarf Component.
 func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
+	log := logging.FromContextOrDiscard(ctx)
+
 	// Toggles for general deploy operations
 	componentPath := p.layout.Components.Dirs[component.Name]
 
@@ -312,7 +315,7 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
 		if hasImages && !p.hpaModified && p.state.RegistryInfo.InternalRegistry {
 			if err := p.cluster.DisableRegHPAScaleDown(ctx); err != nil {
-				message.Debugf("unable to disable the registry HPA scale down: %s", err.Error())
+				log.Error("Unable to disable the registry HPA scale down", "error", err.Error())
 			} else {
 				p.hpaModified = true
 			}

@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/types"
@@ -144,7 +145,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 						return err
 					}
 					if kerrors.IsNotFound(err) {
-						message.Debug("Service account %s/%s not found, retrying...", ns, name)
+						logging.FromContextOrDiscard(ctx).Debug("Service account not found, retrying", "namespace", ns, "name", name)
 						timer.Reset(1 * time.Second)
 						continue
 					}

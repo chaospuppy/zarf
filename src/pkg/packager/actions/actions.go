@@ -14,6 +14,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
@@ -292,7 +293,7 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 	out, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, append(shellArgs, cmd)...)
 	// Dump final complete output (respect mute to prevent sensitive values from hitting the logs).
 	if !cfg.Mute {
-		message.Debug(cmd, out, errOut)
+		logging.FromContextOrDiscard(ctx).Debug(cmd, "stdout", out, "stderr", errOut)
 	}
 
 	return out, err

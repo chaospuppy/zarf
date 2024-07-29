@@ -18,6 +18,7 @@ import (
 
 	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
@@ -113,7 +114,7 @@ func waitForHealthyCluster(ctx context.Context, client kubernetes.Interface) err
 				}
 			}
 
-			message.Debug("No pods reported 'succeeded' or 'running' state yet.")
+			logging.FromContextOrDiscard(ctx).Debug("No pods are in succeeded or running state yet")
 			timer.Reset(waitDuration)
 		}
 	}
