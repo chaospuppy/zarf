@@ -46,7 +46,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.7
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.18.2
+	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/crypto v0.25.0
