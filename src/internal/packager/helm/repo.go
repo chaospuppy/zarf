@@ -37,6 +37,30 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
+const (
+	RepoSourceHelm = "helm"
+	RepoSourceOCI  = "oci"
+	RepoSourceGit  = "git"
+)
+
+func DetermineChartSourceType(ctx context.Context, chart v1alpha1.ZarfChart) (bool, bool, bool) {
+	var isGit, isOCI, isHelm bool
+
+	if len(chart.URL) > 0 {
+		if isOCI := registry.IsOCI(chart.URL); isOCI {
+			return isGit, isOCI, isHelm
+		}
+		url, _, err := transform.GitURLSplitRef(chart.URL)
+		// check if the chart is a git url with a ref (if an error is returned url will be empty)
+		isGit = strings.HasSuffix(url, ".git")
+		if err != nil {
+			logger.From(ctx).Debug("unable to parse the url, continuing", "url", chart.URL)
+		}
+	}
+
+	return isGit, isOCI, isHelm
+}
+
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
 func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string, cachePath string, remoteOptions types.RemoteOptions) error {
 	if len(chart.URL) > 0 {

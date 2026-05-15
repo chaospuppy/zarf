@@ -231,6 +231,10 @@ func (zc ZarfChart) GetServerSideApply() string {
 	return zc.ServerSideApply
 }
 
+func (zc ZarfChart) GetSourceType() {
+
+}
+
 // ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
 type ZarfChartVariable struct {
 	// The name of the variable.

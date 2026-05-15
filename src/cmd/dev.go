@@ -74,6 +74,7 @@ func newDevCommand() *cobra.Command {
 	cmd.AddCommand(newDevFindImagesCommand(v))
 	cmd.AddCommand(newDevGenerateConfigCommand())
 	cmd.AddCommand(newDevLintCommand(v))
+	cmd.AddCommand(newDevCheckLatestChartsCommand())
 
 	return cmd
 }
@@ -923,5 +924,52 @@ func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+type devCheckChartsOptions struct {
+	flavor string
+	update bool
+}
+
+func newDevCheckLatestChartsCommand() *cobra.Command {
+	o := &devCheckChartsOptions{}
+
+	cmd := &cobra.Command{
+		Use:     "latest-chart-versions [ DIRECTORY ]",
+		Args:    cobra.MaximumNArgs(1),
+		Aliases: []string{"cv"},
+		Short:   "TODO",
+		Long:    "TODO",
+		RunE:    o.run,
+	}
+
+	// update charts in zarf.yaml file
+	cmd.Flags().BoolVarP(&o.update, "update", "u", false, "TODO")
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+
+	return cmd
+}
+
+func (o *devCheckChartsOptions) run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+	scans, err := packager.FindLatestCharts(ctx, basePath, packager.CheckChartsOptions{
+		Flavor:    o.flavor,
+		CachePath: cachePath,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%v", scans)
 	return nil
 }
